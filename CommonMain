@@ -1,0 +1,108 @@
+package com.example.proyectorfc
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+fun App() {
+    var nombre by remember { mutableStateOf("") }
+    var paterno by remember { mutableStateOf("") }
+    var materno by remember { mutableStateOf("") }
+    var fecha by remember { mutableStateOf("") }
+
+    val rfcResultado = calcularRFC(nombre, paterno, materno, fecha)
+
+    MaterialTheme {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "GENERADOR DE RFC REACTIVO",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text("Nombre(s)") },
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = paterno,
+                    onValueChange = { paterno = it },
+                    label = { Text("Apellido Paterno") },
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = materno,
+                    onValueChange = { materno = it },
+                    label = { Text("Apellido Materno (Opcional)") },
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = fecha,
+                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) fecha = it },
+                    label = { Text("Fecha Nacimiento (AAMMDD)") },
+                    placeholder = { Text("Ej. 031001") },
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text("RFC CALCULADO:", style = MaterialTheme.typography.labelLarge)
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Text(
+                        text = rfcResultado,
+                        modifier = Modifier.padding(horizontal = 40.dp, vertical = 20.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+fun calcularRFC(n: String, ap: String, am: String, f: String): String {
+    fun limpiar(s: String) = s.trim().uppercase().replace("Ñ", "X").filter { it.isLetter() || it.isWhitespace() }
+
+    val nL = limpiar(n); val pL = limpiar(ap); val mL = limpiar(am); val fL = f.filter { it.isDigit() }
+
+    if (nL.isEmpty() || pL.length < 2 || fL.length < 6) return "DATOS INCOMPLETOS"
+
+    val vocales = "AEIOU"
+    val p1 = pL.take(1)
+    val p2 = pL.substring(1).firstOrNull { it in vocales } ?: 'X'
+    val p3 = if (mL.isBlank()) "X" else mL.take(1)
+
+    val nombres = nL.split(" ").filter { it.isNotBlank() }
+    val comunes = listOf("JOSE", "MARIA", "MA.", "MA", "J.", "J")
+    val nUsar = if (nombres.size > 1 && nombres[0] in comunes) nombres[1] else nombres[0]
+    val p4 = nUsar.take(1)
+
+    var letras = "$p1$p2$p3$p4"
+    val prohibidas = listOf("BUEI", "BUEY", "CACA", "CAKA", "LOCA", "LOCO", "MAME", "PUTA", "PUTO", "PENE", "PEDO")
+    if (letras in prohibidas) letras = letras.substring(0, 3) + "X"
+
+    return (letras + fL).uppercase()
+}
